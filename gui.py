@@ -7,14 +7,14 @@ import os
 from engine import ChessEngine
 from move_history import MoveHistory
 from navigation import Navigation
-
+import requests
 
 class ChessAnalyzerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Chess Analyzer with Stockfish")
 
-        self.engine = ChessEngine("stockfish/stockfish-windows-x86-64-avx2.exe")
+        self.engine = ChessEngine("D:/chessmate/chess_gui/stockfish/stockfish-windows-x86-64-avx2.exe")
         self.board = chess.Board()
         self.selected_square = None
         self.piece_images = self.load_piece_images()
@@ -110,11 +110,63 @@ class ChessAnalyzerApp:
     def analyze_current_position(self):
         analysis = self.engine.analyze(self.board)
         self.analysis_area.delete(1.0, tk.END)
+
         if self.board.move_stack:
+            move = self.board.peek()
             self.analysis_area.insert(tk.END, f"Move: {self.board.peek()}\n")
-        self.analysis_area.insert(tk.END, f"Score: {analysis['score']}\n")
-        if "pv" in analysis:
-            self.analysis_area.insert(tk.END, f"Best Move: {analysis['pv'][0]}\n\n")
+        #self.analysis_area.insert(tk.END, f"Score: {analysis['score']}\n")
+        #if "pv" in analysis:
+        #    self.analysis_area.insert(tk.END, f"Best Move: {analysis['pv'][0]}\n\n")
+        else:
+            move = "start"
+        
+        score = analysis["score"]
+        try:
+            if hasattr(score, "mate") and score.mate() is not None:
+                score_display = f"Mate in {score.mate()}"
+            elif hasattr(score, "score"):
+                score_display = f"{score.score() / 100:.2f}"
+            else:
+                score_display = f"{score / 100:.2f}"
+        except Exception as e:
+            score_display = f"Unknown ({e})"
+
+        self.analysis_area.insert(tk.END, f"Score: {score_display}\n")
+
+        best_move = None
+        if "pv" in analysis and analysis["pv"]:
+            best_move = analysis["pv"][0]
+        best_move_str = str(best_move) if best_move else "Unknown"
+        self.analysis_area.insert(tk.END, f"Best Move: {best_move_str}\n\n")
+
+        # 💬 GPT Explanation
+        explanation = self.get_gpt_explanation(move, score, best_move)
+        self.analysis_area.insert(tk.END, f"GPT: {explanation}\n")
+
+    def get_gpt_explanation(self, move, score, best_move):
+        # Robust formatting of score for payload
+        try:
+            if hasattr(score, "mate") and score.mate() is not None:
+                evaluation = f"Mate in {score.mate()}"
+            elif hasattr(score, "score"):
+                evaluation = f"{score.score() / 100:.2f}"
+            else:
+                evaluation = f"{score / 100:.2f}"
+        except Exception:
+            evaluation = str(score)
+
+        payload = {
+            "move": str(move),
+            "evaluation": evaluation,
+            "best_move": str(best_move) if best_move else ""
+        }
+
+        try:
+            response = requests.post("http://127.0.0.1:8000/analyze", json=payload, timeout=30)
+            data = response.json()
+            return data.get("explanation", "No explanation available.")
+        except Exception as e:
+            return f"Error contacting GPT API: {e}"
 
     def refresh_board(self):
         self.board_canvas.delete("all")
