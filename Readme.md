@@ -1,5 +1,5 @@
 # Python GUI Chess Game Analysis with Stockfish
-*This project is cloned and modified from the open-source repository [Python-GUI-Chess-Game-Analysis-with-Stockfish](https://github.com/mominalix/Python-GUI-Chess-Game-Analysis-with-Stockfish) by mominalix.
+*This project uses files from open-source repository [Python-GUI-Chess-Game-Analysis-with-Stockfish](https://github.com/mominalix/Python-GUI-Chess-Game-Analysis-with-Stockfish) by mominalix.
 
 ![Sample Screenshot](sample.png)
 
